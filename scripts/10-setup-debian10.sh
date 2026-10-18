@@ -32,10 +32,18 @@ apt-get install -y --no-install-recommends \
 
 # 可选包，缺了不致命
 apt-get install -y --no-install-recommends libwoff-dev libmanette-0.2-dev || true
-apt-get install -y --no-install-recommends libenchant-2-dev || true
 
-# 新版本 cmake / ninja / meson（buster 自带的 cmake 3.13 不满足 WebKit 要求）
-pip3 install --no-cache-dir "cmake==3.27.9" ninja meson
+# buster 自带 pip 18，识别不了 manylinux2014 wheel，先升级
+python3 -m pip install --no-cache-dir --upgrade "pip==21.3.1" "setuptools<60" wheel
+
+# cmake：Kitware 官方 aarch64 预编译包，绕开 pip 轮子标签问题
+curl -fsSL -o /tmp/cmake.tar.gz "https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-linux-aarch64.tar.gz"
+mkdir -p /opt/cmake && tar xf /tmp/cmake.tar.gz -C /opt/cmake --strip-components=1
+ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
+ln -sf /opt/cmake/bin/ctest /usr/local/bin/ctest
+
+apt-get install -y --no-install-recommends ninja-build
+pip3 install --no-cache-dir "meson==0.63.3"
 hash -r
 
 cmake --version | head -1

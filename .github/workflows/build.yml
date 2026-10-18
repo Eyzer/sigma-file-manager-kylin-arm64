@@ -33,6 +33,9 @@ jobs:
           git clone --depth 1 "${{ github.server_url }}/${{ github.repository }}.git" /work
           bash /work/scripts/10-setup-debian10.sh
 
+      - name: glib 2.72
+        run: bash /work/scripts/15-build-glib.sh
+
       - name: libsoup 3
         run: bash /work/scripts/20-build-libsoup3.sh
 

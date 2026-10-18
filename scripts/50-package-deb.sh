@@ -70,12 +70,18 @@ while IFS= read -r lib; do
 done < <(sort -u "${COL}")
 echo "自带动态库 ${COUNT} 个"
 
+# glib 2.72 的 GSettings schema（自带 glib 必须配自带 schema）
+mkdir -p "${APPDIR}/share/glib-2.0/schemas"
+cp -a ${PREFIX}/share/glib-2.0/schemas/. "${APPDIR}/share/glib-2.0/schemas/" 2>/dev/null || true
+find "${APPDIR}/share" -name "gschemas.compiled" -delete 2>/dev/null || true
+
 # ---- 启动器 ----
 cat > "${PKG}/usr/bin/sigma-file-manager" <<'LAUNCHER'
 #!/bin/sh
 APPDIR=/opt/sigma-file-manager
 export LD_LIBRARY_PATH="$APPDIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export WEBKIT_EXEC_PATH="$APPDIR/libexec/webkit2gtk-4.1"
+export GSETTINGS_SCHEMA_DIR="$APPDIR/share/glib-2.0/schemas:/usr/share/glib-2.0/schemas"
 export WEBKIT_DISABLE_COMPOSITING_MODE="${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"
 export GDK_BACKEND="${GDK_BACKEND:-x11}"
 exec "$APPDIR/bin/sigma-file-manager" "$@"

@@ -28,7 +28,7 @@ apt-get install -y --no-install-recommends \
   libxrender-dev libxt-dev libxrandr-dev libseccomp-dev libsystemd-dev \
   libtasn1-6-dev libbrotli-dev libpsl-dev libnghttp2-dev liblzma-dev zlib1g-dev \
   libxdo-dev librsvg2-dev libappindicator3-dev libnotify-dev \
-  dpkg-dev fakeroot
+  dpkg-dev fakeroot libffi-dev libpcre2-dev libmount-dev gettext
 
 # 可选包，缺了不致命
 apt-get install -y --no-install-recommends libwoff-dev libmanette-0.2-dev || true

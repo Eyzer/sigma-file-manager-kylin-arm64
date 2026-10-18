@@ -19,7 +19,7 @@ meson setup build \
   -Dman=false \
   -Dgtk_doc=false \
   -Dtests=false \
-  -Dintrospection=disabled \
+  -Dinstalled_tests=false \
   -Dnls=disabled \
   -Dsysprof=disabled
 ninja -C build -j"$(nproc)"

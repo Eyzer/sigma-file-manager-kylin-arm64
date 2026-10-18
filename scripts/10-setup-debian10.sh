@@ -27,7 +27,7 @@ apt-get install -y --no-install-recommends \
   libx11-dev libxcomposite-dev libxdamage-dev libxext-dev libxfixes-dev \
   libxrender-dev libxt-dev libxrandr-dev libseccomp-dev libsystemd-dev \
   libtasn1-6-dev libbrotli-dev libpsl-dev libnghttp2-dev liblzma-dev zlib1g-dev \
-  libopenjp2-7-dev libjpeg-dev \
+  libopenjp2-7-dev libjpeg-dev liblcms2-dev \
   libxdo-dev librsvg2-dev libappindicator3-dev libnotify-dev \
   dpkg-dev fakeroot libffi-dev libpcre2-dev libmount-dev gettext
 

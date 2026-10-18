@@ -1,0 +1,123 @@
+name: Build Kylin V10 arm64 deb
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "configure = 只验依赖与 WebKit 配置；full = 完整编译打包"
+        type: choice
+        options: [full, configure]
+        default: full
+      sfm_ref:
+        description: "上游 tag / 分支"
+        default: v2.2.0
+  push:
+    tags: ["v*"]
+
+jobs:
+  webkit:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: debian:10
+      options: --user root
+    timeout-minutes: 355
+    steps:
+      - name: 基础环境
+        run: |
+          set -eux
+          printf 'deb http://archive.debian.org/debian buster main contrib non-free\ndeb http://archive.debian.org/debian-security buster/updates main contrib non-free\n' > /etc/apt/sources.list
+          rm -rf /etc/apt/sources.list.d/*
+          echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends git ca-certificates curl
+          git clone --depth 1 "${{ github.server_url }}/${{ github.repository }}.git" /work
+          bash /work/scripts/10-setup-debian10.sh
+
+      - name: libsoup 3
+        run: bash /work/scripts/20-build-libsoup3.sh
+
+      - name: WebKitGTK 4.1 配置校验
+        if: inputs.stage == 'configure'
+        run: |
+          set -eux
+          . "$HOME/.cargo/env" 2>/dev/null || true
+          curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.88.0
+          . "$HOME/.cargo/env"
+          cd /tmp/src
+          curl -fsSL -o webkitgtk.tar.xz "https://webkitgtk.org/releases/webkitgtk-2.38.6.tar.xz"
+          tar xf webkitgtk.tar.xz
+          cd webkitgtk-2.38.6
+          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib/aarch64-linux-gnu/pkgconfig
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPORT=GTK \
+            -DENABLE_DOCUMENTATION=OFF -DENABLE_INTROSPECTION=OFF -DENABLE_MINIBROWSER=OFF \
+            -DENABLE_SPELLCHECK=OFF -DENABLE_GAMEPAD=OFF -DENABLE_GEOLOCATION=OFF \
+            -DENABLE_MEDIA_STREAM=OFF -DENABLE_VIDEO=OFF -DENABLE_WEB_AUDIO=OFF \
+            -DENABLE_WEB_RTC=OFF -DUSE_GSTREAMER=OFF -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+            -DENABLE_JIT=ON -DUSE_SYSTEM_MALLOC=ON -DENABLE_LTO=OFF \
+            -DENABLE_X11_TARGET=ON -DENABLE_WAYLAND_TARGET=OFF -DENABLE_DATABASE_PROCESS=OFF
+
+      - name: WebKitGTK 4.1 编译安装
+        if: inputs.stage != 'configure'
+        run: bash /work/scripts/30-build-webkit.sh
+
+      - name: 打包 sysroot
+        if: inputs.stage != 'configure'
+        run: |
+          set -eux
+          cd /usr/local
+          tar -cJf /webkit-prefix.tar.xz .
+          ls -lh /webkit-prefix.tar.xz
+
+      - uses: actions/upload-artifact@v4
+        if: inputs.stage != 'configure'
+        with:
+          name: webkit-prefix
+          path: /webkit-prefix.tar.xz
+          retention-days: 3
+          compression-level: 0
+
+  app:
+    needs: webkit
+    if: needs.webkit.result == 'success' && (inputs.stage == '' || inputs.stage == 'full')
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: debian:10
+      options: --user root
+    timeout-minutes: 180
+    steps:
+      - name: 基础环境
+        run: |
+          set -eux
+          printf 'deb http://archive.debian.org/debian buster main contrib non-free\ndeb http://archive.debian.org/debian-security buster/updates main contrib non-free\n' > /etc/apt/sources.list
+          rm -rf /etc/apt/sources.list.d/*
+          echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends git ca-certificates curl xz-utils
+          git clone --depth 1 "${{ github.server_url }}/${{ github.repository }}.git" /work
+          bash /work/scripts/10-setup-debian10.sh
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: webkit-prefix
+          path: /tmp
+
+      - name: 还原 WebKit sysroot
+        run: |
+          set -eux
+          tar -xJf /tmp/webkit-prefix.tar.xz -C /usr/local
+          ldconfig || true
+          pkg-config --modversion webkit2gtk-4.1
+
+      - name: 编译应用
+        env:
+          SFM_REF: ${{ inputs.sfm_ref || 'v2.2.0' }}
+        run: bash /work/scripts/40-build-app.sh
+
+      - name: 组装 deb
+        run: bash /work/scripts/50-package-deb.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-arm64
+          path: /out/dist/*.deb
+          retention-days: 7

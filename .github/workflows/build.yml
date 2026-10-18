@@ -41,23 +41,7 @@ jobs:
 
       - name: WebKitGTK 4.1 配置校验
         if: inputs.stage == 'configure'
-        run: |
-          set -eux
-          . "$HOME/.cargo/env" 2>/dev/null || true
-          curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.88.0
-          . "$HOME/.cargo/env"
-          cd /tmp/src
-          curl -fsSL -o webkitgtk.tar.xz "https://webkitgtk.org/releases/webkitgtk-2.38.6.tar.xz"
-          tar xf webkitgtk.tar.xz
-          cd webkitgtk-2.38.6
-          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib/aarch64-linux-gnu/pkgconfig
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPORT=GTK \
-            -DENABLE_DOCUMENTATION=OFF -DENABLE_INTROSPECTION=OFF -DENABLE_MINIBROWSER=OFF \
-            -DENABLE_SPELLCHECK=OFF -DENABLE_GAMEPAD=OFF -DENABLE_GEOLOCATION=OFF \
-            -DENABLE_MEDIA_STREAM=OFF -DENABLE_VIDEO=OFF -DENABLE_WEB_AUDIO=OFF \
-            -DENABLE_WEB_RTC=OFF -DUSE_GSTREAMER=OFF -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
-            -DENABLE_JIT=ON -DUSE_SYSTEM_MALLOC=ON -DENABLE_LTO=OFF \
-            -DENABLE_X11_TARGET=ON -DENABLE_WAYLAND_TARGET=OFF -DENABLE_DATABASE_PROCESS=OFF
+        run: bash /work/scripts/35-webkit-configure.sh
 
       - name: WebKitGTK 4.1 编译安装
         if: inputs.stage != 'configure'

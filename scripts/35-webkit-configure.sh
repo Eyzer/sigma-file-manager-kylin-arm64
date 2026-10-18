@@ -21,4 +21,4 @@ pkg-config --modversion libopenjp2
 cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local ${WEBKIT_CMAKE_FLAGS}
 
 echo "== WebKit 配置通过 =="
-grep -E "^(ENABLE_JIT|ENABLE_VIDEO|ENABLE_WEBGL|USE_SOUP2|ENABLE_DATABASE_PROCESS):" build/CMakeCache.txt
+grep -E "^(ENABLE_JIT|ENABLE_VIDEO|ENABLE_WEBGL|USE_SOUP2):" build/CMakeCache.txt || true

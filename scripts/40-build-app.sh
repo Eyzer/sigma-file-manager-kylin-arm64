@@ -20,7 +20,8 @@ fi
 node -v && npm -v
 
 if ! command -v cargo >/dev/null 2>&1; then
-  curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.88.0
+  # 上游没有锁死依赖版本，glib-sys 0.22 起要求 rustc 1.92+，所以用最新 stable
+  curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
   . "$HOME/.cargo/env"
 fi
 export PATH="$HOME/.cargo/bin:$PATH"

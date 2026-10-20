@@ -1,0 +1,58 @@
+name: Build app deb (reuse webkit artifact)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "提供 webkit-prefix 产物的构建 run id"
+        required: true
+      sfm_ref:
+        description: "上游 tag / 分支"
+        default: v2.2.0
+
+jobs:
+  app:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: debian:10
+      options: --user root
+    timeout-minutes: 180
+    steps:
+      - name: 基础环境
+        run: |
+          set -eux
+          printf 'deb http://archive.debian.org/debian buster main contrib non-free\ndeb http://archive.debian.org/debian-security buster/updates main contrib non-free\n' > /etc/apt/sources.list
+          rm -rf /etc/apt/sources.list.d/*
+          echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive
+          apt-get update -qq
+          apt-get install -y --no-install-recommends git ca-certificates curl xz-utils
+          git clone --depth 1 "${{ github.server_url }}/${{ github.repository }}.git" /work
+          bash /work/scripts/10-setup-debian10.sh
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: webkit-prefix
+          path: /tmp
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 还原 WebKit sysroot
+        run: |
+          set -eux
+          tar -xJf /tmp/webkit-prefix.tar.xz -C /usr/local
+          ldconfig || true
+          PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib/aarch64-linux-gnu/pkgconfig pkg-config --modversion webkit2gtk-4.1
+
+      - name: 编译应用
+        env:
+          SFM_REF: ${{ inputs.sfm_ref }}
+        run: bash /work/scripts/40-build-app.sh
+
+      - name: 组装 deb
+        run: bash /work/scripts/50-package-deb.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-arm64
+          path: /out/dist/*.deb
+          retention-days: 7

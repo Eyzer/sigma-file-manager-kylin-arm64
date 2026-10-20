@@ -33,11 +33,17 @@ sed -i 's|#\[cfg(not(feature = "linux-body"))\]|#[cfg(all())]|' \
   vendor/wry/src/webkitgtk/web_context.rs
 
 # 3) 指向本地副本
-if ! grep -q '^\[patch.crates-io\]' Cargo.toml; then
-  printf '\n[patch.crates-io]\nwry = { path = "vendor/wry" }\n' >> Cargo.toml
+# 注意：上游 Cargo.toml 里已经有 [patch.crates-io]（patch 了 drag），
+# 不能再追加一个同名表（TOML 重复表会报错），必须插到已有表的第一行之后。
+if ! grep -q '^wry *= *{ *path' Cargo.toml; then
+  grep -q '^\[patch\.crates-io\]$' Cargo.toml || printf '\n[patch.crates-io]\n' >> Cargo.toml
+  sed -i '/^\[patch\.crates-io\]$/a wry = { path = "vendor/wry" }' Cargo.toml
 fi
 
 echo "== 检查补丁结果 =="
 grep -n -A4 '^linux-body = \[' vendor/wry/Cargo.toml
 grep -n 'linux-body' vendor/wry/src/webkitgtk/web_context.rs | sed -n '1,6p'
-tail -3 Cargo.toml
+grep -n -A3 '^\[patch\.crates-io\]$' Cargo.toml
+# 硬校验：patch 必须真的挂上，否则 cargo 会静默用 crates.io 的原版 wry
+grep -q '^wry *= *{ *path *= *"vendor/wry" *}$' Cargo.toml || { echo "patch 未写入 Cargo.toml"; exit 1; }
+! grep -q 'webkit2gtk/v2_40' vendor/wry/Cargo.toml || { echo "v2_40 依赖仍在"; exit 1; }

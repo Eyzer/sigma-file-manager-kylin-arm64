@@ -1,0 +1,85 @@
+name: Publish deb to Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "产出 deb 的构建 run id"
+        required: true
+      tag:
+        description: "发布 tag"
+        required: true
+        default: "v2.2.0-kylin-arm64"
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: 取回 deb 产物
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-arm64
+          path: dist
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+
+      - name: 检查包内容
+        run: |
+          set -eux
+          ls -lh dist
+          DEB=$(find dist -name '*.deb' | head -1)
+          dpkg-deb -I "$DEB"
+          echo "== 顶层目录 =="
+          dpkg-deb -c "$DEB" | awk '{print $6}' | cut -d/ -f1-4 | sort -u | sed -n '1,30p'
+          echo "== 自带库数量 =="
+          dpkg-deb -c "$DEB" | grep -c 'opt/sigma-file-manager/lib/' || true
+          echo "== WebKit 子进程 =="
+          dpkg-deb -c "$DEB" | grep -E 'libexec/webkit2gtk-4.1/[^/]+$' || true
+          echo "== 注入包 =="
+          dpkg-deb -c "$DEB" | grep -i 'injected' || echo '(无 injected-bundle)'
+
+      - name: 发布到 Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eux
+          DEB=$(find dist -name '*.deb' | head -1)
+          cat > /tmp/notes.md <<'EOF'
+          ## Sigma File Manager — 银河麒麟 V10 / arm64 离线包
+
+          上游 [sigma-file-manager](https://github.com/aleksey-hoffman/sigma-file-manager) v2.2.0（Tauri 2 + Vue）的 arm64 重编译版本，面向**纯内网**环境。
+
+          ### 安装
+
+          ```bash
+          sudo dpkg -i SigmaFileManager_2.2.0_arm64.deb
+          ```
+
+          装完在应用菜单里出现「Sigma 文件管理器」，或命令行执行 `sigma-file-manager`。
+
+          ### 自包含程度
+
+          - 包内自带 WebKitGTK 2.38.6（提供 4.1 API）、libsoup3、glib 2.72、GTK3、Pango、Cairo、ICU、HarfBuzz 等全部运行时，装在 `/opt/sigma-file-manager`
+          - 系统只需要：`libc6 >= 2.28`、`libgl1`/`libegl1`/`libgbm1`/`libdrm2`、`libx11-6`、`libxext6`、`libxrender1`、`libsm6`、`libice6`（均为麒麟 V10 自带，且 GPU 库不能打包）
+          - 不联网、不装额外依赖即可运行
+
+          ### 已知取舍
+
+          - 上游 wry 强制要求 WebKitGTK ≥ 2.40，而 2.40 需要 GCC ≥ 9.3，Debian 10 / 麒麟 V10 SP1 只有 GCC 8.3。因此用 2.38.6 + 两处兼容补丁：自定义协议的 POST 请求体、cookie 读取返回空。文件管理器的浏览/打开/复制等主流程不受影响。
+          - 飞腾/景嘉微等 GPU 上若出现白屏，启动器默认已设 `WEBKIT_DISABLE_COMPOSITING_MODE=1`；仍异常可再 `LIBGL_ALWAYS_SOFTWARE=1 sigma-file-manager`。
+          - 中文界面若显示方块，装 `fonts-noto-cjk`。
+
+          ### 构建
+
+          GitHub Actions `Build Kylin V10 arm64 deb`，Debian 10 容器（glibc 2.28 锚点）+ ubuntu-24.04-arm 原生 arm64 机器。源码与脚本见本仓库。
+          EOF
+          gh release create "${{ inputs.tag }}" "$DEB" \
+            --title "Sigma File Manager 2.2.0 (Kylin V10 / arm64)" \
+            --notes-file /tmp/notes.md || \
+          gh release upload "${{ inputs.tag }}" "$DEB" --clobber
+          gh release view "${{ inputs.tag }}" --json assets --jq '.assets[] | "\(.name)  \(.size)"'

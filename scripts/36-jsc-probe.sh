@@ -3,7 +3,9 @@
 # 用来在 15 分钟内判定补丁是否有效，不必等 4 小时的完整编译
 set -euxo pipefail
 
-WK=/tmp/src/webkitgtk-2.38.6
+. /work/scripts/versions.sh
+
+WK="${SRC_DIR}/webkitgtk-${WEBKIT_VER}"
 cd "$WK"
 
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib/aarch64-linux-gnu/pkgconfig

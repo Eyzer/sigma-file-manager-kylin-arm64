@@ -7,7 +7,7 @@
 上游 v2 是 Tauri 2 应用，wry 0.57 硬绑 `webkit2gtk-4.1` + `libsoup3`。麒麟 V10 SP1 官方源只有 `libwebkit2gtk-4.0-37`，没有 4.1，且 glibc 仅 2.28。
 所以本仓库做两件事：
 
-1. 在 **Debian 10（glibc 2.28）** 容器里从源码编译 `libsoup 3` + `WebKitGTK 2.38`（提供 4.1 API），使产物 ABI 与麒麟 V10 SP1 对齐；
+1. 在 **Debian 10（glibc 2.28）** 容器里从源码编译 `glib 2.72` + `libsoup 3` + `WebKitGTK 2.40.5`（提供 4.1 API），使产物 ABI 与麒麟 V10 SP1 对齐；
 2. 把这些库连同 GTK 全栈一起打进 deb 的 `/opt/sigma-file-manager/lib`，安装后不依赖任何额外软件包。
 
 ## 产物

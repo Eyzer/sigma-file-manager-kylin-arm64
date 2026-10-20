@@ -2,14 +2,15 @@
 # WebKitGTK 4.1 配置校验：只跑 cmake 配置，不编译。提前暴露缺库/缺头文件
 set -euxo pipefail
 
+. /work/scripts/versions.sh
 . /work/scripts/common-webkit-flags.sh
 
-mkdir -p /tmp/src && cd /tmp/src
-if [ ! -d webkitgtk-2.38.6 ]; then
-  curl -fsSL -o webkitgtk.tar.xz "https://webkitgtk.org/releases/webkitgtk-2.38.6.tar.xz"
-  tar xf webkitgtk.tar.xz
+mkdir -p "${SRC_DIR}" && cd "${SRC_DIR}"
+if [ ! -d "webkitgtk-${WEBKIT_VER}" ]; then
+  curl -fsSL -o "webkitgtk-${WEBKIT_VER}.tar.xz" "https://webkitgtk.org/releases/webkitgtk-${WEBKIT_VER}.tar.xz"
+  tar xf "webkitgtk-${WEBKIT_VER}.tar.xz"
 fi
-cd webkitgtk-2.38.6
+cd "webkitgtk-${WEBKIT_VER}"
 
 bash /work/scripts/25-patch-webkit.sh
 

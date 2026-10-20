@@ -15,8 +15,13 @@ mkdir -p "${APPDIR}/bin" "${LIBS}" "${APPDIR}/libexec" \
          "${PKG}/usr/bin" "${PKG}/usr/share/applications" \
          "${PKG}/usr/share/icons/hicolor/128x128/apps" "${PKG}/DEBIAN"
 
-BIN="${REPO}/src-tauri/target/aarch64-unknown-linux-gnu/release/sigma-file-manager"
-test -x "${BIN}"
+# 二进制位置由 40 脚本写出（原生编译，不再固定 target triple 路径）
+if [ -f /tmp/app-bin.env ]; then
+  . /tmp/app-bin.env
+else
+  BIN="$(find "${REPO}/src-tauri/target" -maxdepth 3 -type f -name sigma-file-manager -perm -u+x | head -1)"
+fi
+[ -n "${BIN:-}" ] && [ -x "${BIN}" ] || { echo "找不到应用二进制"; exit 1; }
 cp -a "${BIN}" "${APPDIR}/bin/sigma-file-manager"
 strip --strip-unneeded "${APPDIR}/bin/sigma-file-manager" || true
 

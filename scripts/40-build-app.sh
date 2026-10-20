@@ -37,10 +37,13 @@ node -e "console.log('app version', require('./package.json').version)"
 npm ci --no-audit --no-fund
 
 # 只编二进制，deb 由 50 脚本自己组（完全掌控依赖与自带库）
-npx tauri build --no-bundle --target aarch64-unknown-linux-gnu --verbose 2>&1 | tail -60
+# 不做 --target 交叉指定：runner 本身是 aarch64，走原生路径避免 pkg-config 被 sysroot 化
+npx tauri build --no-bundle --verbose 2>&1 | tail -60
 
-BIN="src-tauri/target/aarch64-unknown-linux-gnu/release/sigma-file-manager"
-test -x "${BIN}"
+RAW="$(find src-tauri/target -maxdepth 3 -type f -name sigma-file-manager -perm -u+x | head -1)"
+[ -n "${RAW}" ] || { echo "未找到编译产物"; ls -R src-tauri/target 2>/dev/null | head -40; exit 1; }
+BIN="$(readlink -f "${RAW}")"
 file "${BIN}" || true
 ls -lh "${BIN}"
+echo "BIN=${BIN}" > /tmp/app-bin.env
 echo "== 应用编译完成 =="

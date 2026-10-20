@@ -36,6 +36,11 @@ node -e "console.log('app version', require('./package.json').version)"
 
 npm ci --no-audit --no-fund
 
+# 备用路线：目标 WebKit 只有 2.38 时，把 wry 对 2.40 接口的依赖摘掉
+if [ "${PATCH_WRY_238:-0}" = "1" ]; then
+  REPO="$(pwd)" bash /work/scripts/45-patch-wry.sh
+fi
+
 # 只编二进制，deb 由 50 脚本自己组（完全掌控依赖与自带库）
 # 不做 --target 交叉指定：runner 本身是 aarch64，走原生路径避免 pkg-config 被 sysroot 化
 npx tauri build --no-bundle --verbose 2>&1 | tail -60

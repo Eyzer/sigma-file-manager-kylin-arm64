@@ -2,39 +2,42 @@
 # 让 wry 0.55 可以对着 WebKitGTK 2.38 编译（备用路线）
 #
 # 背景：wry 的 linux-body 特性打开了 webkit2gtk/v2_40，cargo 编译期就要求
-# pkg-config >= 2.40。2.40 需要 GCC >= 9.3，buster 只有 8.3。
-# 若 2.40 走不通，就把 wry 里唯一用到的 2.40 接口（自定义协议请求体）关掉，
-# 退回 v2_38。代价：自定义协议的 POST 请求体拿不到（文件管理器基本不用）。
+# pkg-config >= 2.40；而 WebKit 2.40 需要 GCC >= 9.3，buster 只有 8.3（实测
+# std::is_constant_evaluated 与 NEON vld1q_u8_x4 均不可用）。
+# 因此退回 2.38：把 wry 里唯一使用 2.40 接口的代码块关掉。
+# 代价：自定义协议的 POST 请求体读不到（GET 读文件不受影响）。
 set -euxo pipefail
 
 REPO="${REPO:-/work/src-repo}"
-cd "${REPO}"
+cd "${REPO}/src-tauri"
 
-# 拉齐依赖源码，registry 里才有 wry 的完整包
-( cd src-tauri && cargo fetch )
+# 版本以 Cargo.lock 为准，避免和上游漂移
+WVER="$(awk '/^name = "wry"$/{f=1} f&&/^version = /{gsub(/[",]/,"");print $3;exit}' Cargo.lock)"
+[ -n "${WVER}" ] || { echo "Cargo.lock 中找不到 wry"; exit 1; }
+echo "wry 版本: ${WVER}"
 
-CARGO_SRC="${CARGO_HOME:-$HOME/.cargo}/registry/src"
-W="$(find "${CARGO_SRC}" -maxdepth 2 -type d -name 'wry-0.55.*' -print -quit)"
-[ -n "${W}" ] || { echo "registry 中找不到 wry-0.55.x"; exit 1; }
-echo "vendor 源: ${W}"
-
-rm -rf src-tauri/vendor/wry
-mkdir -p src-tauri/vendor
-cp -a "${W}" src-tauri/vendor/wry
+rm -rf vendor/wry && mkdir -p vendor
+curl -fsSL -o /tmp/wry.crate "https://crates.io/api/v1/crates/wry/${WVER}/download"
+tar xzf /tmp/wry.crate -C vendor
+mv "vendor/wry-${WVER}" vendor/wry
 
 # 1) 特性定义里去掉 webkit2gtk/v2_40
-sed -i '/^linux-body = \[$/,/^\]/{/webkit2gtk\/v2_40/d}' src-tauri/vendor/wry/Cargo.toml
+sed -i '/^linux-body = \[$/,/^\]/{/webkit2gtk\/v2_40/d}' vendor/wry/Cargo.toml
 
-# 2) 关掉唯一使用 2.40 接口的代码块（保留 not(feature) 的兜底分支）
+# 2) 关掉唯一使用 2.40 接口的代码块，保留 not(feature) 的空实现兜底
 sed -i '0,/#\[cfg(feature = "linux-body")\]/s||#[cfg(feature = "linux-body-needs-webkit-2-40")]|' \
-  src-tauri/vendor/wry/src/webkitgtk/web_context.rs
+  vendor/wry/src/webkitgtk/web_context.rs
+# 兜底分支原本是 not(feature="linux-body")，但该特性仍被上游开着，
+# 两个分支都进不去会导致 body 未初始化，改成恒真
+sed -i 's|#\[cfg(not(feature = "linux-body"))\]|#[cfg(all())]|' \
+  vendor/wry/src/webkitgtk/web_context.rs
 
 # 3) 指向本地副本
-if ! grep -q '^\[patch.crates-io\]' src-tauri/Cargo.toml; then
-  printf '\n[patch.crates-io]\nwry = { path = "vendor/wry" }\n' >> src-tauri/Cargo.toml
+if ! grep -q '^\[patch.crates-io\]' Cargo.toml; then
+  printf '\n[patch.crates-io]\nwry = { path = "vendor/wry" }\n' >> Cargo.toml
 fi
 
 echo "== 检查补丁结果 =="
-grep -n -A4 '^linux-body = \[' src-tauri/vendor/wry/Cargo.toml
-grep -n 'linux-body' src-tauri/vendor/wry/src/webkitgtk/web_context.rs | head
-tail -4 src-tauri/Cargo.toml
+grep -n -A4 '^linux-body = \[' vendor/wry/Cargo.toml
+grep -n 'linux-body' vendor/wry/src/webkitgtk/web_context.rs | sed -n '1,6p'
+tail -3 Cargo.toml

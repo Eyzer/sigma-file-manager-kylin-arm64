@@ -102,6 +102,7 @@ jobs:
       - name: 编译应用
         env:
           SFM_REF: ${{ inputs.sfm_ref || 'v2.2.0' }}
+          PATCH_WRY_238: "1"
         run: bash /work/scripts/40-build-app.sh
 
       - name: 组装 deb

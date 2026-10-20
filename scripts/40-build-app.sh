@@ -10,6 +10,17 @@ WORK=/work
 export PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib/aarch64-linux-gnu/pkgconfig:${PKG_CONFIG_PATH:-}
 export LD_LIBRARY_PATH=${PREFIX}/lib:${PREFIX}/lib/aarch64-linux-gnu:${LD_LIBRARY_PATH:-}
 
+# tauri 自己的 wry 特性里硬编码了 webkit2gtk/v2_40，特性合并后 cargo 一定要求
+# pkg-config >= 2.40；而 2.40 需要 GCC >= 9.3，buster 只有 8.3。我们实际编的是
+# 2.38.6，v2_40 相对它只是多一批 extern 声明（未引用的符号不进链接），
+# 2.40 唯一被用到的 http_body 已由 45-patch-wry.sh 摘掉。
+# 因此把 .pc 的版本号抬到 2.40.5 以满足 cargo 的版本断言。
+for pc in $(find "${PREFIX}" -name 'webkit2gtk-4.1.pc' -print); do
+  sed -i -E 's/^Version:.*/Version: 2.40.5/' "${pc}"
+  echo "bumped ${pc}"
+done
+pkg-config --modversion webkit2gtk-4.1
+
 # Node 24（package.json engines 要求）
 if ! command -v node >/dev/null 2>&1; then
   NODE_VER=24.16.0

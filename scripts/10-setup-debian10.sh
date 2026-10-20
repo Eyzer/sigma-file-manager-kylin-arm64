@@ -18,7 +18,7 @@ apt-get update -qq
 
 apt-get install -y --no-install-recommends \
   build-essential pkg-config git curl wget xz-utils ca-certificates \
-  python3 python3-pip python3-setuptools ruby perl gperf bison flex \
+  python3 python3-pip python3-setuptools ruby perl gperf bison flex unifdef \
   libgtk-3-dev libglib2.0-dev libxml2-dev libxslt1-dev libsqlite3-dev \
   libjpeg62-turbo-dev libpng-dev libwebp-dev libharfbuzz-dev \
   libfreetype6-dev libfontconfig1-dev libcairo2-dev libpango1.0-dev \

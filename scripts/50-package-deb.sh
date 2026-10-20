@@ -33,6 +33,13 @@ done
 test -n "${WEBKIT_EXEC_SRC}"
 mkdir -p "${APPDIR}/libexec/webkit2gtk-4.1"
 cp -a "${WEBKIT_EXEC_SRC}/." "${APPDIR}/libexec/webkit2gtk-4.1/"
+
+# WebKit 的注入包（WebProcess 内由 dlopen 加载，ldd 完全扫不到，漏了会白屏）
+for base in "${PREFIX}/lib/webkit2gtk-4.1" "${PREFIX}/libexec/webkit2gtk-4.1"; do
+  [ -d "${base}/injected-bundle" ] || continue
+  mkdir -p "${APPDIR}/libexec/webkit2gtk-4.1/injected-bundle"
+  cp -a "${base}/injected-bundle/." "${APPDIR}/libexec/webkit2gtk-4.1/injected-bundle/"
+done
 find "${APPDIR}/libexec" -type f -exec strip --strip-unneeded {} \; 2>/dev/null || true
 
 # ---- 递归收集动态库 ----
@@ -86,6 +93,7 @@ cat > "${PKG}/usr/bin/sigma-file-manager" <<'LAUNCHER'
 APPDIR=/opt/sigma-file-manager
 export LD_LIBRARY_PATH="$APPDIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export WEBKIT_EXEC_PATH="$APPDIR/libexec/webkit2gtk-4.1"
+export WEBKIT_INJECTED_BUNDLE_PATH="$APPDIR/libexec/webkit2gtk-4.1/injected-bundle"
 export GSETTINGS_SCHEMA_DIR="$APPDIR/share/glib-2.0/schemas:/usr/share/glib-2.0/schemas"
 export WEBKIT_DISABLE_COMPOSITING_MODE="${WEBKIT_DISABLE_COMPOSITING_MODE:-1}"
 export GDK_BACKEND="${GDK_BACKEND:-x11}"

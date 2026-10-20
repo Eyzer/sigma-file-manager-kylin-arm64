@@ -14,7 +14,7 @@ cd "${REPO}"
 ( cd src-tauri && cargo fetch )
 
 CARGO_SRC="${CARGO_HOME:-$HOME/.cargo}/registry/src"
-W="$(find "${CARGO_SRC}" -maxdepth 2 -type d -name 'wry-0.55.*' | head -1)"
+W="$(find "${CARGO_SRC}" -maxdepth 2 -type d -name 'wry-0.55.*' -print -quit)"
 [ -n "${W}" ] || { echo "registry 中找不到 wry-0.55.x"; exit 1; }
 echo "vendor 源: ${W}"
 

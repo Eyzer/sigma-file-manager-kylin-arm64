@@ -19,7 +19,7 @@ mkdir -p "${APPDIR}/bin" "${LIBS}" "${APPDIR}/libexec" \
 if [ -f /tmp/app-bin.env ]; then
   . /tmp/app-bin.env
 else
-  BIN="$(find "${REPO}/src-tauri/target" -maxdepth 3 -type f -name sigma-file-manager -perm -u+x | head -1)"
+  BIN="$(find "${REPO}/src-tauri/target" -maxdepth 3 -type f -name sigma-file-manager -perm -u+x -print -quit)"
 fi
 [ -n "${BIN:-}" ] && [ -x "${BIN}" ] || { echo "找不到应用二进制"; exit 1; }
 cp -a "${BIN}" "${APPDIR}/bin/sigma-file-manager"
@@ -111,7 +111,7 @@ StartupWMClass=sigma-file-manager
 DESKTOP
 
 ICON_SRC="${REPO}/src-tauri/icons/128x128.png"
-[ -f "${ICON_SRC}" ] || ICON_SRC="$(find "${REPO}/src-tauri/icons" -name '128x128*.png' | head -1)"
+[ -f "${ICON_SRC}" ] || ICON_SRC="$(find "${REPO}/src-tauri/icons" -name '128x128*.png' -print -quit)"
 cp -f "${ICON_SRC}" "${PKG}/usr/share/icons/hicolor/128x128/apps/sigma-file-manager.png"
 
 # ---- control ----

@@ -47,10 +47,11 @@ apt-get install -y --no-install-recommends ninja-build
 pip3 install --no-cache-dir "meson==0.63.3"
 hash -r
 
-cmake --version | head -1
+# 版本自检：用 sed 读完整流，避免 head 提前关闭管道触发 SIGPIPE（pipefail 下会直接 141 失败）
+cmake --version 2>&1 | sed -n '1p'
 ninja --version
 meson --version
-gcc --version | head -1
-ldd --version | head -1
+gcc --version 2>&1 | sed -n '1p'
+ldd --version 2>&1 | sed -n '1p'
 
 echo "== 环境就绪 =="

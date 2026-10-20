@@ -14,4 +14,4 @@ export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu:${LD_LIBR
 ninja -C build -j"$(nproc)" JavaScriptCore
 
 echo "== JavaScriptCore 编译通过 =="
-ls -la build/lib/libjavascriptcoregtk-4.1.so* 2>/dev/null || find build -name "libjavascriptcoregtk*" | head
+ls -la build/lib/libjavascriptcoregtk-4.1.so* 2>/dev/null || find build -name "libjavascriptcoregtk*" -print -quit

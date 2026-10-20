@@ -31,7 +31,7 @@ fi
 sed -i '0,/#include/s||#include "JSCast.h"\n&|' "$ARG"
 
 echo "== 补丁结果 =="
-sed -n '1,40p' "$ARG" | grep -n '#include' | head -20
+sed -n '1,40p' "$ARG" | grep -n '#include' | sed -n '1,20p'
 
 # WebKit 2.40 把编译器门槛抬到 GCC 9.3，而 buster 只有 8.3。
 # 门槛是"编译器已知可用"的下限声明，不是语法要求，先放宽再实编验证。

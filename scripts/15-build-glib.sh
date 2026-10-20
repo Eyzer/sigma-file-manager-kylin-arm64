@@ -28,5 +28,5 @@ ninja -C build install
 export PKG_CONFIG_PATH=${PREFIX}/lib/pkgconfig:${PREFIX}/lib/aarch64-linux-gnu/pkgconfig
 pkg-config --modversion glib-2.0
 pkg-config --modversion gio-2.0
-ls ${PREFIX}/share/glib-2.0/schemas/ | head
+ls ${PREFIX}/share/glib-2.0/schemas/ | sed -n '1,10p'
 echo "== glib 2.72 完成 =="

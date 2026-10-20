@@ -45,7 +45,7 @@ fi
 # 不做 --target 交叉指定：runner 本身是 aarch64，走原生路径避免 pkg-config 被 sysroot 化
 npx tauri build --no-bundle --verbose 2>&1 | tail -60
 
-RAW="$(find src-tauri/target -maxdepth 3 -type f -name sigma-file-manager -perm -u+x | head -1)"
+RAW="$(find src-tauri/target -maxdepth 3 -type f -name sigma-file-manager -perm -u+x -print -quit)"
 [ -n "${RAW}" ] || { echo "未找到编译产物"; ls -R src-tauri/target 2>/dev/null | head -40; exit 1; }
 BIN="$(readlink -f "${RAW}")"
 file "${BIN}" || true

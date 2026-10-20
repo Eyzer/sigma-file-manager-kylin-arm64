@@ -11,6 +11,8 @@ if [ ! -d webkitgtk-2.38.6 ]; then
 fi
 cd webkitgtk-2.38.6
 
+bash /work/scripts/25-patch-webkit.sh
+
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib/aarch64-linux-gnu/pkgconfig
 echo "== pkg-config 校验 =="
 pkg-config --modversion glib-2.0

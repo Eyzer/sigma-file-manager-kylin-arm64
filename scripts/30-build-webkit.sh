@@ -22,6 +22,8 @@ curl -fsSL -o webkitgtk.tar.xz "https://webkitgtk.org/releases/webkitgtk-${WEBKI
 tar xf webkitgtk.tar.xz
 cd "webkitgtk-${WEBKIT_VER}"
 
+bash /work/scripts/25-patch-webkit.sh
+
 . /work/scripts/common-webkit-flags.sh
 
 cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=${PREFIX} ${WEBKIT_CMAKE_FLAGS}

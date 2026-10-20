@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       stage:
-        description: "configure = 只验依赖与 WebKit 配置；full = 完整编译打包"
+        description: "configure = 只验依赖；jsc = 配置 + 编 JavaScriptCore（快验编译问题）；full = 完整编译打包"
         type: choice
-        options: [full, configure]
+        options: [full, configure, jsc]
         default: full
       sfm_ref:
         description: "上游 tag / 分支"
@@ -40,15 +40,19 @@ jobs:
         run: bash /work/scripts/20-build-libsoup3.sh
 
       - name: WebKitGTK 4.1 配置校验
-        if: inputs.stage == 'configure'
+        if: inputs.stage == 'configure' || inputs.stage == 'jsc'
         run: bash /work/scripts/35-webkit-configure.sh
 
+      - name: JavaScriptCore 快验编译
+        if: inputs.stage == 'jsc'
+        run: bash /work/scripts/36-jsc-probe.sh
+
       - name: WebKitGTK 4.1 编译安装
-        if: inputs.stage != 'configure'
+        if: inputs.stage == '' || inputs.stage == 'full'
         run: bash /work/scripts/30-build-webkit.sh
 
       - name: 打包 sysroot
-        if: inputs.stage != 'configure'
+        if: inputs.stage == '' || inputs.stage == 'full'
         run: |
           set -eux
           cd /usr/local
@@ -56,7 +60,7 @@ jobs:
           ls -lh /webkit-prefix.tar.xz
 
       - uses: actions/upload-artifact@v4
-        if: inputs.stage != 'configure'
+        if: inputs.stage == '' || inputs.stage == 'full'
         with:
           name: webkit-prefix
           path: /webkit-prefix.tar.xz

@@ -10,6 +10,11 @@ PKG=${OUT}/pkg
 APPDIR=${PKG}/opt/sigma-file-manager
 LIBS=${APPDIR}/lib
 
+# 关键：ldd 必须优先解析 /usr/local 下自编的 glib 2.72 / libsoup3 / WebKit。
+# 否则 ldd 按 ld.so.cache 解析到 buster 自带的 glib 2.58（缺
+# g_source_set_dispose_function 等 2.64+ 符号），运行期直接 symbol lookup error。
+export LD_LIBRARY_PATH="${PREFIX}/lib:${PREFIX}/lib/aarch64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
 rm -rf "${PKG}"
 mkdir -p "${APPDIR}/bin" "${LIBS}" "${APPDIR}/libexec" \
          "${PKG}/usr/bin" "${PKG}/usr/share/applications" \
@@ -81,6 +86,35 @@ while IFS= read -r lib; do
   COUNT=$((COUNT+1))
 done < <(sort -u "${COL}")
 echo "自带动态库 ${COUNT} 个"
+
+# ---- 硬校验 1：凡是 /usr/local 里自编过的库，包里那份必须逐字节一致 ----
+BAD=0
+for f in "${LIBS}"/*; do
+  n=$(basename "$f")
+  for src in "${PREFIX}/lib/${n}" "${PREFIX}/lib/aarch64-linux-gnu/${n}"; do
+    [ -e "${src}" ] || continue
+    if ! cmp -s "$f" "${src}"; then
+      echo "!! 打包错误：${n} 与 /usr/local 下的自编版本不一致"
+      BAD=1
+    fi
+  done
+done
+[ "${BAD}" = "0" ] || exit 1
+
+# ---- 硬校验 2：glib 必须带 2.64+ 符号，libsoup3 必须是真的 3.x ----
+grep -aq g_source_set_dispose_function "${LIBS}/libglib-2.0.so.0" \
+  || { echo "!! 包内 glib 版本过低（缺 g_source_set_dispose_function）"; exit 1; }
+grep -aq soup_session_send "${LIBS}/libsoup-3.0.so.0" \
+  || { echo "!! 包内 libsoup-3.0 异常"; exit 1; }
+if [ -f "${LIBS}/libwebkit2gtk-4.1.so.0" ]; then
+  grep -aq webkit_web_view_new "${LIBS}/libwebkit2gtk-4.1.so.0" \
+    || { echo "!! 包内 libwebkit2gtk-4.1 异常"; exit 1; }
+fi
+
+# ---- 硬校验 3：用包内库路径跑 ldd，不允许有 not found ----
+MISSING=$(LD_LIBRARY_PATH="${LIBS}" ldd "${APPDIR}/bin/sigma-file-manager" | sed -n '/not found/p')
+[ -z "${MISSING}" ] || { echo "!! 缺库：${MISSING}"; exit 1; }
+echo "== 依赖校验通过 =="
 
 # glib 2.72 的 GSettings schema（自带 glib 必须配自带 schema）
 mkdir -p "${APPDIR}/share/glib-2.0/schemas"

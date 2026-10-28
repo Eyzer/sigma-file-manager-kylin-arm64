@@ -161,7 +161,7 @@ VERSION=$(grep -m1 '"version"' "${REPO}/package.json" | sed 's/[^0-9.]//g')
 SIZE_KB=$(du -sk "${PKG}" | cut -f1)
 cat > "${PKG}/DEBIAN/control" <<CONTROL
 Package: sigma-file-manager
-Version: ${VERSION}
+Version: ${VERSION}-2
 Section: utils
 Priority: optional
 Architecture: arm64
